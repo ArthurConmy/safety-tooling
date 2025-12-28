@@ -71,6 +71,8 @@ class LLMResponse(pydantic.BaseModel):
     completion: str
     stop_reason: StopReason | GeminiStopReason | GeminiBlockReason
     cost: float = 0
+    reasoning: str | None = None  # Reasoning trace from reasoning models (e.g., DeepSeek-R1, o1)
+    reasoning_details: List[Dict[str, Any]] | None = None  # OpenRouter reasoning_details for multi-turn
     generated_content: List[ChatMessage] | None = None
     audio_out: str | Path | None = None
     duration: float | None = None

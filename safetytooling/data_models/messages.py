@@ -64,6 +64,10 @@ class ChatCompletionDeepSeekAssistantMessageParam(openai.types.chat.ChatCompleti
 class ChatMessage(HashableBaseModel):
     role: MessageRole
     content: str | Path | Dict[str, Any] | List[Dict[str, Any]]
+    # OpenRouter reasoning_details for multi-turn with reasoning models (Claude, etc.)
+    # Pass this unchanged from previous assistant response to preserve reasoning context
+    # Excluded from hash to maintain cache compatibility with pre-reasoning entries
+    reasoning_details: List[Dict[str, Any]] | None = pydantic.Field(default=None, exclude=True)
 
     def __post_init__(self):
         if isinstance(self.content, Path):
@@ -104,11 +108,18 @@ class ChatMessage(HashableBaseModel):
                 result["content"] = text_content
             if tool_calls:
                 result["tool_calls"] = tool_calls
+            # Include reasoning_details for multi-turn reasoning models
+            if self.reasoning_details:
+                result["reasoning_details"] = self.reasoning_details
 
             return result
         else:
             # Default behavior unchanged
-            return {"role": self.role.value, "content": self.content}
+            result = {"role": self.role.value, "content": self.content}
+            # Include reasoning_details for assistant messages (multi-turn reasoning)
+            if self.role == MessageRole.assistant and self.reasoning_details:
+                result["reasoning_details"] = self.reasoning_details
+            return result
 
     def deepseek_format(
         self, is_prefix: bool = False
