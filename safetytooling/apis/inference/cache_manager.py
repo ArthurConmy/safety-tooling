@@ -147,10 +147,10 @@ class FileBasedCacheManager(BaseCacheManager):
         self.max_mem_usage_mb = max_mem_usage_mb
 
     def remove_entry(self, cache_file: Path):
-        self.in_memory_cache.pop(cache_file)
+        self.in_memory_cache.pop(cache_file, None)
 
         if self.max_mem_usage_mb is not None:
-            size = self.sizes.pop(cache_file)
+            size = self.sizes.pop(cache_file, 0)
             self.total_usage_mb -= size
             LOGGER.info(f"Removed entry from mem cache. Freed {size} MB.")
 
