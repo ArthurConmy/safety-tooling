@@ -28,3 +28,4 @@ SECRETS
 .env
 __pycache__/
 SECRETS.test
+uv.lock
