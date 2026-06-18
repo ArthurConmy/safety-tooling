@@ -22,6 +22,24 @@ from safetytooling.utils.utils import load_json, save_json
 
 LOGGER = logging.getLogger(__name__)
 
+
+def _response_is_empty(response) -> bool:
+    """Whether a cached response carries no usable content.
+
+    A response is treated as empty only when it has *neither* a text completion
+    *nor* structured ``generated_content`` (e.g. a tool / function call). Tool-call
+    responses legitimately have an empty ``.completion`` but a non-empty
+    ``.generated_content``; counting those as empty wrongly trips the
+    ``empty_completion_threshold`` cache-invalidation path, so a valid tool-call
+    response is never cached and every call re-hits the API (no caching,
+    non-deterministic). Guarding on ``generated_content`` preserves the original
+    behaviour for plain-text responses (empty iff ``completion == ""``).
+    """
+    if getattr(response, "generated_content", None):
+        return False
+    return response.completion == ""
+
+
 REDIS_CONFIG_DEFAULT = {
     "host": "localhost",
     "port": 6379,
@@ -185,7 +203,7 @@ class FileBasedCacheManager(BaseCacheManager):
                 LOGGER.info(f"Loaded cache for prompt from {cache_file}")
 
                 prop_empty_completions = sum(
-                    1 for response in cached_result.responses if response.completion == ""
+                    1 for response in cached_result.responses if _response_is_empty(response)
                 ) / len(cached_result.responses)
 
                 if prop_empty_completions > empty_completion_threshold:
@@ -393,7 +411,7 @@ class RedisCacheManager(BaseCacheManager):
                 LOGGER.info(f"Loaded cache for prompt from {cache_dir}")
 
                 prop_empty_completions = sum(
-                    1 for response in cached_result.responses if response.completion == ""
+                    1 for response in cached_result.responses if _response_is_empty(response)
                 ) / len(cached_result.responses)
 
                 if prop_empty_completions > empty_completion_threshold:
